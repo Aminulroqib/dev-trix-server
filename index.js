@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const fs = require('fs-extra')
 const fileUpload = require('express-fileupload');
 const MongoClient = require('mongodb').MongoClient;
 require('dotenv').config()
@@ -11,7 +12,7 @@ const app = express()
 
 app.use(bodyParser.json());
 app.use(cors());
-app.use(express.static('services'));
+app.use(express.static('reviews'));
 app.use(fileUpload());
 
 const port = 5000;
@@ -25,6 +26,7 @@ client.connect(err => {
     console.log('connection err', err)
     const eventCollection = client.db("devTrix").collection("service");
     const reviewCollection = client.db("devTrix").collection("review");
+    const adminCollection = client.db("devTrix").collection("admin");
     
        app.post('/addEvent', (req, res)=>{
            const newEvent = req.body;
@@ -44,20 +46,53 @@ client.connect(err => {
     })
 
     app.post('/addReview', (req, res)=>{
-        const newReview = req.body;
-        console.log('adding new review:', newReview);
-        reviewCollection.insertOne(newReview)
-           .then(result => {
-            console.log('inserted:', result.insertedCount);
-            res.send(result.insertedCount > 0)
-           })
+        const file = req.files.file;
+        const name = req.body.name;
+        const company = req.body.company;
+        const description = req.body.description;
+        const newImg = file.data;
+        const encImg = newImg.toString('base64');
+
+          var image = {
+            contentType: file.mimetype,
+            size: file.size,
+            img: Buffer.from(encImg, 'base64')
+        };
+        reviewCollection.insertOne({ name, company, description, image })
+        .then(result => {
+            res.send(result.insertedCount > 0);
+        })
     })
 
     app.get('/reviews', (req, res)=>{
-        reviewCollection.find()
+        reviewCollection.find({})
         .toArray((err, testimonials)=>{
             res.send(testimonials);
         })
+    })
+
+    app.post('/addAdmin', (req, res)=>{
+        const newAdmin = req.body;
+           console.log('adding new:', newAdmin)
+           adminCollection.insertOne(newAdmin)
+           .then(result => {
+            console.log('inserted admin:', result.insertedCount);
+            res.send(result.insertedCount > 0)
+           })
+    })
+    app.get('/admins', (req, res)=>{
+        adminCollection.find()
+        .toArray((err, admins)=>{
+            res.send(admins);
+        })
+    })
+
+    app.post('/isAdmin', (req, res) => {
+        const email = req.body.email;
+        adminCollection.find({email: email})
+            .toArray((err, admns) => {
+                res.send(admns.length > 0);
+            })
     })
 
     })
