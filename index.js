@@ -31,7 +31,7 @@ client.connect(err => {
        app.post('/addEvent', (req, res)=>{
            const newEvent = req.body;
            console.log('adding new:', newEvent)
-           reviewCollection.insertOne(newEvent)
+           eventCollection.insertOne(newEvent)
            .then(result => {
             console.log('inserted:', result.insertedCount);
             res.send(result.insertedCount > 0)
